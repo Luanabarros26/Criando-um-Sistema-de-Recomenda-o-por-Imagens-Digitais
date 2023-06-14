@@ -1,0 +1,65 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.vgg16 import preprocess_input
+from sklearn.metrics.pairwise import cosine_distances
+
+# Carregar o modelo pré-treinado
+model = VGG16(weights='imagenet', include_top=False)
+
+# Função para extrair características de uma imagem
+def extract_features(img_path):
+    img = image.load_img(img_path, target_size=(224, 224))
+    x = image.img_to_array(img)
+    x = np.expand_dims(x, axis=0)
+    x = preprocess_input(x)
+    features = model.predict(x)
+    features = np.squeeze(features)
+    return features
+
+# Função para calcular a similaridade entre duas imagens
+def calculate_similarity(features1, features2):
+    features1 = np.reshape(features1, (1, -1))
+    features2 = np.reshape(features2, (1, -1))
+    similarity = 1 - cosine_distances(features1, features2)
+    return similarity[0][0]
+
+# Conjunto de dados de imagens e suas classes
+dataset = {
+    'Relogio1': 'caminho_para_a_imagem_relogio1',
+    'Relogio2': 'caminho_para_a_imagem_relogio2',
+    'Camiseta1': 'caminho_para_a_imagem_camiseta1',
+    'Camiseta2': 'caminho_para_a_imagem_camiseta2',
+    'Bicicleta1': 'caminho_para_a_imagem_bicicleta1',
+    'Bicicleta2': 'caminho_para_a_imagem_bicicleta2',
+    'Sapato1': 'caminho_para_a_imagem_sapato1',
+    'Sapato2': 'caminho_para_a_imagem_sapato2',
+}
+
+# Extrair características de todas as imagens no conjunto de dados
+features = {}
+for key, value in dataset.items():
+    features[key] = extract_features(value)
+
+# Função para recomendar produtos similares
+def recommend_similar_products(query_image, top_n=3):
+    query_features = extract_features(query_image)
+    similarities = {}
+    
+    # Calcular a similaridade entre a imagem buscada e todas as outras imagens
+    for key, value in features.items():
+        similarity = calculate_similarity(query_features, value)
+        similarities[key] = similarity
+    
+    # Ordenar os resultados por similaridade
+    sorted_similarities = sorted(similarities.items(), key=lambda x: x[1], reverse=True)
+    
+    # Obter os top N produtos similares
+    top_similar_products = sorted_similarities[:top_n]
+    return top_similar_products
+
+# Exemplo de uso
+query_image_path = 'caminho_para_a_imagem_buscada'
+similar_products = recommend_similar_products(query_image_path, top_n=3)
+print(similar_products)
